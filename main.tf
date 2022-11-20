@@ -73,3 +73,13 @@ module "public_rtb" {
   subnets = module.public_subnets[*].id
   vpc_id  = aws_vpc.vpc.id
 }
+
+module "security_group" {
+  source      = "./modules/security_group"
+  name        = "ec2-sg"
+  description = "Enable SSH and HTTP"
+  rules       = [
+    ["ingress", "22", "22", "tcp", "0.0.0.0/0"],
+    ["ingress", "80", "80", "tcp", "0.0.0.0/0"]
+  ]
+}
