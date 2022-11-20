@@ -35,3 +35,41 @@ module "public_subnets" {
 resource "aws_internet_gateway" "igw" {
   vpc_id = aws_vpc.vpc.id
 }
+
+resource "aws_eip" "eip" {
+  vpc = true
+}
+
+resource "aws_nat_gateway" "nat_gw" {
+  subnet_id     = module.private_subnets[0].id
+  allocation_id = aws_eip.eip.id
+  depends_on    = [aws_internet_gateway.igw]
+}
+
+resource "aws_route_table" "private_rtb" {
+  vpc_id = aws_vpc.vpc.id
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.igw.id
+  }
+}
+
+module "private_rtb" {
+  source = "./modules/route_table"
+  route  = {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_nat_gateway.nat_gw.id
+  }
+  subnets = module.private_subnets[*].id
+  vpc_id  = aws_vpc.vpc.id
+}
+
+module "public_rtb" {
+  source = "./modules/route_table"
+  route  = {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.igw.id
+  }
+  subnets = module.public_subnets[*].id
+  vpc_id  = aws_vpc.vpc.id
+}
