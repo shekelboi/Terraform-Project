@@ -10,3 +10,7 @@ variable "is_public" {
   type    = bool
   default = false
 }
+
+variable "availability_zone" {
+  type = string
+}
