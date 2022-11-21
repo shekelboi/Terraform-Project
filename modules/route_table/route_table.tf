@@ -2,8 +2,9 @@ resource "aws_route_table" "rtb" {
   vpc_id = var.vpc_id
 
   route {
-    cidr_block = var.route["cidr_block"]
-    gateway_id = var.route["gateway_id"]
+    cidr_block     = var.route["cidr_block"]
+    nat_gateway_id = lookup(var.route, "nat_gateway_id", null)
+    gateway_id     = lookup(var.route, "gateway_id", null)
   }
 }
 

@@ -46,40 +46,60 @@ resource "aws_nat_gateway" "nat_gw" {
   depends_on    = [aws_internet_gateway.igw]
 }
 
-resource "aws_route_table" "private_rtb" {
-  vpc_id = aws_vpc.vpc.id
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.igw.id
-  }
-}
-
 module "private_rtb" {
-  source = "./modules/route_table"
-  route  = {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = aws_nat_gateway.nat_gw.id
-  }
+  source  = "./modules/route_table"
   subnets = module.private_subnets[*].id
   vpc_id  = aws_vpc.vpc.id
+
+  route = {
+    cidr_block     = "0.0.0.0/0"
+    nat_gateway_id = aws_nat_gateway.nat_gw.id
+  }
 }
 
 module "public_rtb" {
-  source = "./modules/route_table"
-  route  = {
+  source  = "./modules/route_table"
+  subnets = module.public_subnets[*].id
+  vpc_id  = aws_vpc.vpc.id
+
+  route = {
     cidr_block = "0.0.0.0/0"
     gateway_id = aws_internet_gateway.igw.id
   }
-  subnets = module.public_subnets[*].id
-  vpc_id  = aws_vpc.vpc.id
 }
 
-module "security_group" {
+module "public_ec2_security_group" {
   source      = "./modules/security_group"
-  name        = "ec2-sg"
+  name        = "public-ec2-sg"
   description = "Enable SSH and HTTP"
+  vpc_id      = aws_vpc.vpc.id
   rules       = [
     ["ingress", "22", "22", "tcp", "0.0.0.0/0"],
     ["ingress", "80", "80", "tcp", "0.0.0.0/0"]
   ]
+}
+
+module "private_ec2_security_group" {
+  source       = "./modules/security_group"
+  name         = "private-ec2-sg"
+  description  = "Enable SSH within the network"
+  vpc_id       = aws_vpc.vpc.id
+  source_is_sg = true
+  rules        = [
+    ["ingress", "22", "22", "tcp", module.public_ec2_security_group.id]
+  ]
+}
+
+module "public_ec2" {
+  count     = 2
+  source    = "./modules/instance"
+  sg_ids    = [module.public_ec2_security_group.id]
+  subnet_id = module.public_subnets[count.index % 2].id
+}
+
+module "private_ec2" {
+  count     = 2
+  source    = "./modules/instance"
+  sg_ids    = [module.private_ec2_security_group.id]
+  subnet_id = module.private_subnets[count.index % 2].id
 }
