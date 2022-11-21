@@ -103,3 +103,10 @@ module "private_ec2" {
   sg_ids    = [module.private_ec2_security_group.id]
   subnet_id = module.private_subnets[count.index % 2].id
 }
+
+module "target_group" {
+  source  = "./modules/target_group"
+  name    = "project-tg"
+  vpc_id  = aws_vpc.vpc.id
+  ec2_ids = module.public_ec2[*].id
+}
