@@ -41,7 +41,7 @@ resource "aws_eip" "eip" {
 }
 
 resource "aws_nat_gateway" "nat_gw" {
-  subnet_id     = module.private_subnets[0].id
+  subnet_id     = module.public_subnets[0].id
   allocation_id = aws_eip.eip.id
   depends_on    = [aws_internet_gateway.igw]
 }
@@ -130,4 +130,21 @@ module "alb" {
   target_group_arn = module.target_group.arn
 }
 
-# TODO: add RDS, RDS subnet group and security group
+module "rds_sg" {
+  source       = "./modules/security_group"
+  name         = "rds-sg"
+  description  = "Enable MYSQL for private-sg"
+  vpc_id       = aws_vpc.vpc.id
+  source_is_sg = true
+  rules        = [
+    ["ingress", "3306", "3306", "tcp", module.private_ec2_security_group.id]
+  ]
+}
+
+module "rds" {
+  source     = "./modules/rds"
+  name       = "projectdb"
+  vpc_id     = aws_vpc.vpc.id
+  subnet_ids = module.private_subnets[*].id
+  rds_sg_ids = [module.rds_sg.id]
+}
