@@ -75,7 +75,7 @@ module "public_ec2_security_group" {
   vpc_id      = aws_vpc.vpc.id
   rules       = [
     ["ingress", "22", "22", "tcp", "0.0.0.0/0"],
-    ["ingress", "80", "80", "tcp", "0.0.0.0/0"]
+    ["ingress", "80", "80", "tcp", "0.0.0.0/0"] # TODO: only enable internally
   ]
 }
 
@@ -129,3 +129,5 @@ module "alb" {
   subnet_ids       = module.public_subnets[*].id
   target_group_arn = module.target_group.arn
 }
+
+# TODO: add RDS, RDS subnet group and security group
