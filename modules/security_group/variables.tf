@@ -12,7 +12,7 @@ variable "vpc_id" {
 }
 
 variable "rules" {
-  type = list(list(string))
+  type = map(list(list(string)))
 }
 
 variable "source_is_sg" {

@@ -73,10 +73,10 @@ module "public_ec2_security_group" {
   name        = "public-ec2-sg"
   description = "Enable SSH and HTTP"
   vpc_id      = aws_vpc.vpc.id
-  rules       = [
-    ["ingress", "22", "22", "tcp", "0.0.0.0/0"],
-    ["ingress", "80", "80", "tcp", "0.0.0.0/0"] # TODO: only enable internally
-  ]
+  rules       = {
+    "cidr" = [["ingress", "22", "22", "tcp", "0.0.0.0/0"]]
+    "sg"   = [["ingress", "80", "80", "tcp", module.alb_sg.id]]
+  }
 }
 
 module "private_ec2_security_group" {
@@ -85,9 +85,9 @@ module "private_ec2_security_group" {
   description  = "Enable SSH within the network"
   vpc_id       = aws_vpc.vpc.id
   source_is_sg = true
-  rules        = [
-    ["ingress", "22", "22", "tcp", module.public_ec2_security_group.id]
-  ]
+  rules        = {
+    "sg" = [["ingress", "22", "22", "tcp", module.public_ec2_security_group.id]]
+  }
 }
 
 module "public_ec2" {
@@ -116,10 +116,12 @@ module "alb_sg" {
   name        = "alb-sg"
   description = "Enable HTTPS for everyone and HTTP internally"
   vpc_id      = aws_vpc.vpc.id
-  rules       = [
-    ["ingress", "443", "443", "tcp", "0.0.0.0/0"],
-    ["ingress", "80", "80", "tcp", "0.0.0.0/0"] # Only for redirection
-  ]
+  rules       = {
+    cidr = [
+      ["ingress", "443", "443", "tcp", "0.0.0.0/0"],
+      ["ingress", "80", "80", "tcp", "0.0.0.0/0"] # Only for redirection
+    ]
+  }
 }
 
 module "alb" {
@@ -136,9 +138,11 @@ module "rds_sg" {
   description  = "Enable MYSQL for private-sg"
   vpc_id       = aws_vpc.vpc.id
   source_is_sg = true
-  rules        = [
-    ["ingress", "3306", "3306", "tcp", module.private_ec2_security_group.id]
-  ]
+  rules        = {
+    "sg" : [
+      ["ingress", "3306", "3306", "tcp", module.private_ec2_security_group.id]
+    ]
+  }
 }
 
 module "rds" {
