@@ -110,3 +110,22 @@ module "target_group" {
   vpc_id  = aws_vpc.vpc.id
   ec2_ids = module.public_ec2[*].id
 }
+
+module "alb_sg" {
+  source      = "./modules/security_group"
+  name        = "alb-sg"
+  description = "Enable HTTPS for everyone and HTTP internally"
+  vpc_id      = aws_vpc.vpc.id
+  rules       = [
+    ["ingress", "443", "443", "tcp", "0.0.0.0/0"],
+    ["ingress", "80", "80", "tcp", "0.0.0.0/0"] # Only for redirection
+  ]
+}
+
+module "alb" {
+  source           = "./modules/load_balancer"
+  name             = "project-alb"
+  sg_id            = module.alb_sg.id
+  subnet_ids       = module.public_subnets[*].id
+  target_group_arn = module.target_group.arn
+}
