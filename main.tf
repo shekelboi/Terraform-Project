@@ -91,10 +91,11 @@ module "private_ec2_security_group" {
 }
 
 module "public_ec2" {
-  count     = 2
-  source    = "./modules/instance"
-  sg_ids    = [module.public_ec2_security_group.id]
-  subnet_id = module.public_subnets[count.index % 2].id
+  count      = 2
+  source     = "./modules/instance"
+  sg_ids     = [module.public_ec2_security_group.id]
+  subnet_id  = module.public_subnets[count.index % 2].id
+  depends_on = [aws_internet_gateway.igw]
 }
 
 module "private_ec2" {
