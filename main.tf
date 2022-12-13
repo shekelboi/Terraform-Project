@@ -44,13 +44,12 @@ module "public_ec2_security_group" {
   description = "Enable SSH and HTTP"
   vpc_id      = aws_vpc.vpc.id
   rules       = {
-    "cidr" = [["ingress", "22", "22", "tcp", "0.0.0.0/0"]]
-    "sg"   = [["ingress", "80", "80", "tcp", module.alb_sg.id]]
+    "cidr" = [["ingress", "22", "22", "tcp", "0.0.0.0/0"], ["ingress", "80", "80", "tcp", "0.0.0.0/0"]]
   }
 }
 
 module "public_ec2" {
-  count      = 2
+  count      = 1
   source     = "./modules/instance"
   sg_ids     = [module.public_ec2_security_group.id]
   subnet_id  = module.public_subnets[count.index % 2].id
