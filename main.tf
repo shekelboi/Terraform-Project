@@ -12,15 +12,6 @@ data "aws_availability_zones" "azs" {
 locals {
   cidr         = cidrsubnets(aws_vpc.vpc.cidr_block, 2, 2, 2, 2)
   public_cidr  = slice(local.cidr, 0, 2)
-  private_cidr = slice(local.cidr, 2, 4)
-}
-
-module "private_subnets" {
-  source            = "./modules/subnet"
-  count             = 2
-  vpc_id            = aws_vpc.vpc.id
-  cidr              = local.private_cidr[count.index]
-  availability_zone = data.aws_availability_zones.azs.names[count.index % 2]
 }
 
 module "public_subnets" {
@@ -34,27 +25,6 @@ module "public_subnets" {
 
 resource "aws_internet_gateway" "igw" {
   vpc_id = aws_vpc.vpc.id
-}
-
-resource "aws_eip" "eip" {
-  vpc = true
-}
-
-resource "aws_nat_gateway" "nat_gw" {
-  subnet_id     = module.public_subnets[0].id
-  allocation_id = aws_eip.eip.id
-  depends_on    = [aws_internet_gateway.igw]
-}
-
-module "private_rtb" {
-  source  = "./modules/route_table"
-  subnets = module.private_subnets[*].id
-  vpc_id  = aws_vpc.vpc.id
-
-  route = {
-    cidr_block     = "0.0.0.0/0"
-    nat_gateway_id = aws_nat_gateway.nat_gw.id
-  }
 }
 
 module "public_rtb" {
@@ -79,30 +49,12 @@ module "public_ec2_security_group" {
   }
 }
 
-module "private_ec2_security_group" {
-  source       = "./modules/security_group"
-  name         = "private-ec2-sg"
-  description  = "Enable SSH within the network"
-  vpc_id       = aws_vpc.vpc.id
-  source_is_sg = true
-  rules        = {
-    "sg" = [["ingress", "22", "22", "tcp", module.public_ec2_security_group.id]]
-  }
-}
-
 module "public_ec2" {
   count      = 2
   source     = "./modules/instance"
   sg_ids     = [module.public_ec2_security_group.id]
   subnet_id  = module.public_subnets[count.index % 2].id
   depends_on = [aws_internet_gateway.igw]
-}
-
-module "private_ec2" {
-  count     = 2
-  source    = "./modules/instance"
-  sg_ids    = [module.private_ec2_security_group.id]
-  subnet_id = module.private_subnets[count.index % 2].id
 }
 
 module "target_group" {
@@ -141,7 +93,7 @@ module "rds_sg" {
   source_is_sg = true
   rules        = {
     "sg" : [
-      ["ingress", "3306", "3306", "tcp", module.private_ec2_security_group.id]
+      ["ingress", "3306", "3306", "tcp", module.public_ec2_security_group.id]
     ]
   }
 }
@@ -150,6 +102,6 @@ module "rds" {
   source     = "./modules/rds"
   name       = "projectdb"
   vpc_id     = aws_vpc.vpc.id
-  subnet_ids = module.private_subnets[*].id
+  subnet_ids = module.public_subnets[*].id
   rds_sg_ids = [module.rds_sg.id]
 }
