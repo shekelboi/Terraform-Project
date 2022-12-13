@@ -8,5 +8,4 @@ resource "aws_instance" "ec2" {
   subnet_id              = var.subnet_id
   vpc_security_group_ids = var.sg_ids
   key_name               = data.aws_key_pair.tentech_key_pairs.key_name
-  user_data              = file("${path.module}/user_data.sh")
 }
