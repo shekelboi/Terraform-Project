@@ -7,7 +7,7 @@ resource "aws_alb_target_group" "target_group" {
   health_check {
     healthy_threshold = 3
     timeout           = 2
-    path              = "/index.html"
+    path              = "/index.php"
     matcher           = "200"
     interval          = 5
   }
